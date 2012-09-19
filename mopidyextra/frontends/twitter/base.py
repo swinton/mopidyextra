@@ -80,7 +80,11 @@ class TwitterSession(object):
             obj = userstream_generator.next()
             logger.debug(u'Received %s from stream (stopped: %s)' % (repr(obj), repr(self._stop.is_set())))
             if obj is not None:
-                self.frontend_ref.tell(obj)
+                try:
+                    for response in self.dispatcher.handle_request(obj):
+                        self.frontend_ref.tell(response)
+                except ValueError:
+                    continue
 
     def start(self):
         self._consumer.start()

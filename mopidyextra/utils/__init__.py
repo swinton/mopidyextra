@@ -11,6 +11,9 @@ from oauth_hook import OAuthHook
 
 from mopidy import settings
 
+# REGEXes
+TRACK_REGEX = re.compile(r'\b(?:spotify:track:|http://open.spotify.com/track/)(\S+)\b')
+
 def userstream(access_token, access_token_secret, consumer_key, consumer_secret):
     oauth_hook = OAuthHook(access_token=access_token, access_token_secret=access_token_secret, 
                            consumer_key=consumer_key, consumer_secret=consumer_secret, 
@@ -27,6 +30,13 @@ def userstream(access_token, access_token_secret, consumer_key, consumer_secret)
             yield json.loads(chunk)
         else:
             yield None
+
+def extract_spotify_track_uris(s):
+    """
+    Extracts Spotify track URIs from a string, returns a de-duplicated list.
+    """
+    ids = list(set(TRACK_REGEX.findall(s)))
+    return ["spotify:track:" + id for id in ids]
 
 def spotify_uri_to_url(uri):
     """

@@ -4,6 +4,8 @@ from pykka.registry import ActorRegistry
 
 from mopidy.backends.base import Backend
 
+import mopidyextra.utils as utils
+
 from handlers import default_handler
 
 logger = logging.getLogger('mopidyextra.frontends.twitter.dispatcher')
@@ -19,12 +21,32 @@ class TwitterDispatcher(object):
         self.context = TwitterContext(self, session=session)
 
     def _validate_request(self, request):
-        # TODO: ensure request is a valid Spotify URI / URL
-        return request
+        # Is this request a direct message?
+        a_direct_message = utils.item_a_direct_message(request)
+
+        # Is this request a mention?
+        a_mention = utils.item_a_mention(request)
+
+        # Only allow direct messages or mentions
+        if not a_direct_message and not a_mention:
+            raise ValueError("Required: a mention or a direct message")
+
+        # Get screen_name and text from request
+        screen_name = utils.get_screen_name(request)
+        text = utils.get_text(request)
+
+        # Any Spotify tracks?
+        tracks = utils.extract_spotify_track_uris(text)
+        if not tracks:
+            raise ValueError("Required: one or more Spotify track URIs")
+
+        requests = [dict(screen_name=screen_name, text=text, uri=track) for track in tracks]
+
+        return requests
 
     def _find_handler(self, request):
         # Only one handler currently, althouth this may change...
-        return default_handler, dict(uri=request)
+        return default_handler, request
 
     def _call_handler(self, request):
         (handler, kwargs) = self._find_handler(request)
@@ -32,11 +54,12 @@ class TwitterDispatcher(object):
 
     def handle_request(self, request):
         # Validate request, must be a value Spotify URI / URL
-        request = self._validate_request(request)
+        requests = self._validate_request(request)
 
-        # Identify and call handler, return the response 
-        return self._call_handler(request)
-
+        for request in requests:
+            # Identify and call handler, return the response 
+            yield self._call_handler(request)
+    
 class TwitterContext(object):
     """
     Provides access to important parts of Mopidy.
