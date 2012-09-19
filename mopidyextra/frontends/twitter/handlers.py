@@ -1,5 +1,7 @@
 import logging
 
+from mopidy.backends.base import PlaybackController
+
 logger = logging.getLogger('mopidyextra.frontends.handlers')
 
 def default_handler(context, screen_name, text, uri):
@@ -13,5 +15,10 @@ def default_handler(context, screen_name, text, uri):
 
     # Add the track
     cp_track = context.backend.current_playlist.add(track).get()
+
+    # Start playing the track already, if not playing already
+    state = context.backend.playback.state.get()
+    if state != PlaybackController.PLAYING:
+        context.backend.playback.play().get()
 
     return dict(id=cp_track.cpid, screen_name=screen_name, text=text, uri=uri)
