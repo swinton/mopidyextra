@@ -57,8 +57,11 @@ class TwitterDispatcher(object):
         requests = self._validate_request(request)
 
         for request in requests:
-            # Identify and call handler, return the response 
-            yield self._call_handler(request)
+            # Notify front-end
+            yield request
+            
+            # Identify and call handler 
+            self._call_handler(request)
     
 class TwitterContext(object):
     """

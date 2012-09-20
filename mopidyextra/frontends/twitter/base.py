@@ -19,10 +19,21 @@ from dispatcher import TwitterDispatcher
 logger = logging.getLogger('mopidyextra.frontends.twitter')
 
 class TwitterFrontend(ThreadingActor, BackendListener):
+    requests = {}
 
     def __init__(self):
         super(TwitterFrontend, self).__init__()
         self.session = TwitterSession(frontend_ref=self.actor_ref)
+
+        self.access_token = settings.CUSTOM_TWITTER_ACCESS_TOKEN
+        self.access_token_secret = settings.CUSTOM_TWITTER_ACCESS_TOKEN_SECRET
+        self.consumer_key = settings.CUSTOM_TWITTER_CONSUMER_KEY
+        self.consumer_secret = settings.CUSTOM_TWITTER_CONSUMER_SECRET
+
+        auth = tweepy.OAuthHandler(self.consumer_key, self.consumer_secret)
+        auth.set_access_token(self.access_token, self.access_token_secret)
+
+        self.api = tweepy.API(auth)
 
     def on_start(self):
         self.session.start()
@@ -33,23 +44,28 @@ class TwitterFrontend(ThreadingActor, BackendListener):
     def on_receive(self, message):
         logging.info(u'Received message: %s' % repr(message))
 
-    def track_playback_started(self, track):
-        # track (an instance of mopidy.models.Track) has attributes:
-        #   uri
-        #   name
-        #   artists (frozenset)
-        #   album
-        #   track_no
-        #   date
-        #   length
-        #   bitrate
-        #   musicbrainz_id
+        if "uri" in message and "screen_name" in message:
+            self.requests[message["uri"]] = message["screen_name"]
 
-        # TODO: Tweet #Nowplaying ... / ... requested by @...
-        artists = ', '.join([a.name for a in track.artists])
+    def track_playback_started(self, track):
+        try:
+            # Tweet #Nowplaying ... / ... requested by @...
+            artists = ', '.join([a.name for a in track.artists])
+            uri = track.uri
+            screen_name = self.requests.pop(uri)
+
+            # Send tweet!
+            tweet = u'#Nowplaying %s / %s, requested by @%s %s' % (artists, track.name, screen_name, utils.spotify_uri_to_url(uri))
+            self.api.update_status(status=tweet, lat="50.82519295639108", long="-0.14594435691833496", display_coordinates="1")
+            logger.info(u'Tweeted: %s' % tweet)
+
+        except KeyError:
+            # Not requested through Twitter?
+            pass
         
-        logger.info(u'Now playing track: %s', repr(track))
-        
+        except Exception, e:
+            logger.debug(u'Unexpected exception: %s' % str(e))
+
         return
 
 class TwitterSession(tweepy.StreamListener):
