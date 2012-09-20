@@ -4,9 +4,8 @@ from pykka.registry import ActorRegistry
 
 from mopidy.backends.base import Backend
 
-import mopidyextra.utils as utils
-
-from handlers import default_handler
+from mopidyextra import utils
+from mopidyextra.frontends.twitter.handlers import default_handler
 
 logger = logging.getLogger('mopidyextra.frontends.twitter.dispatcher')
 
@@ -15,7 +14,7 @@ class TwitterDispatcher(object):
     The Twitter session feeds the Twitter dispatcher with requests. The dispatcher
     processes the request and sends the response back to the Twitter session.
 
-    Equivalent to mopidy.frontends.mpd.dispatcher.MpdDispatcher
+    Analogous to mopidy.frontends.mpd.dispatcher.MpdDispatcher
     """
     def __init__(self, session=None):
         self.context = TwitterContext(self, session=session)
@@ -67,7 +66,7 @@ class TwitterContext(object):
     """
     Provides access to important parts of Mopidy.
 
-    Equivalent to mopidy.frontends.mpd.dispatcher.MpdContext
+    Analogous to mopidy.frontends.mpd.dispatcher.MpdContext
     """
 
     def __init__(self, dispatcher, session=None):

@@ -1,1 +1,1 @@
-from base import TwitterFrontend, TwitterSession
+from mopidyextra.frontends.twitter.base import TwitterFrontend, TwitterSession

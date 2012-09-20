@@ -3,33 +3,10 @@ Misc. utility functions for dealing with tweets, primarily.
 """
 import re
 
-import json
-
-import requests
-
-from oauth_hook import OAuthHook
-
 from mopidy import settings
 
 # REGEXes
 TRACK_REGEX = re.compile(r'\b(?:spotify:track:|http://open.spotify.com/track/)(\S+)\b')
-
-def userstream(access_token, access_token_secret, consumer_key, consumer_secret):
-    oauth_hook = OAuthHook(access_token=access_token, access_token_secret=access_token_secret, 
-                           consumer_key=consumer_key, consumer_secret=consumer_secret, 
-                           header_auth=True)
-
-    hooks = dict(pre_request=oauth_hook)
-    client = requests.session(hooks=hooks)
-
-    data = dict(delimited="length")
-    r = client.post("https://userstream.twitter.com/2/user.json", data=data, prefetch=False)
-    
-    for chunk in r.iter_lines(chunk_size=1):
-        if chunk and not chunk.isdigit():
-            yield json.loads(chunk)
-        else:
-            yield None
 
 def extract_spotify_track_uris(s):
     """

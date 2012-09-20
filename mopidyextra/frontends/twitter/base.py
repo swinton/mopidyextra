@@ -5,16 +5,14 @@ import ssl
 import threading
 import time
 
-import tweepy
-
 from pykka.actor import ThreadingActor
 
 from mopidy import settings, SettingsError
 from mopidy.listeners import BackendListener
 
-import mopidyextra.utils as utils
-
-from dispatcher import TwitterDispatcher
+from mopidyextra import utils
+from mopidyextra.packages import tweepy
+from mopidyextra.frontends.twitter.dispatcher import TwitterDispatcher
 
 logger = logging.getLogger('mopidyextra.frontends.twitter')
 
@@ -72,7 +70,7 @@ class TwitterSession(tweepy.StreamListener):
     """
     Connects to the user stream, passes incoming data from Twitter off to the dispatcher.
 
-    Equivalent to mopidy.frontends.mpd.MpdSession.
+    Analogous to mopidy.frontends.mpd.MpdSession.
     """
     
     def __init__(self, frontend_ref):
