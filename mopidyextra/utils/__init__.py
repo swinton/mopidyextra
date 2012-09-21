@@ -1,9 +1,13 @@
 """
 Misc. utility functions for dealing with tweets, primarily.
 """
+import json
 import re
+import urllib
 
 from mopidy import settings
+
+from mopidyextra.utils.decorators import memoized
 
 # REGEXes
 TRACK_REGEX = re.compile(r'\b(?:spotify:track:|http://open.spotify.com/track/)(\S+)\b')
@@ -27,6 +31,11 @@ def spotify_uri_to_url(uri):
         "http://open.spotify.com/\g<type>/\g<id>", 
         uri
     )
+
+@memoized
+def lookup_spotify_track(uri):
+    res = json.load(urllib.urlopen("http://ws.spotify.com/lookup/1/.json?uri=%s" % urllib.quote(uri)))
+    return res
 
 def item_a_direct_message(item):
     """

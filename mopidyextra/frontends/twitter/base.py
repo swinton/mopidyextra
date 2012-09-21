@@ -7,8 +7,12 @@ import time
 
 from pykka.actor import ThreadingActor
 
+from spotify import Link, SpotifyError
+
 from mopidy import settings, SettingsError
+from mopidy.backends.spotify.translator import SpotifyTranslator
 from mopidy.listeners import BackendListener
+from mopidy.models import Track, Artist, Album
 
 from mopidyextra import utils
 from mopidyextra.packages import tweepy
@@ -47,6 +51,26 @@ class TwitterFrontend(ThreadingActor, BackendListener):
 
     def track_playback_started(self, track):
         try:
+            if track.name == u'[loading...]':
+                spotify_track = Link.from_string(track.uri).as_track()
+                # TODO Block until metadata_updated callback is called. Before that
+                # the track will be unloaded, unless it's already in the stored
+                # playlists.
+                if not spotify_track.is_loaded():
+                    logger.debug(u'Looking up "%s" from metadata API', track.uri)
+                    spotify_track = utils.lookup_spotify_track(track.uri)
+                    track = Track(
+                                uri=track.uri,
+                                name=spotify_track["track"]["name"],
+                                artists=[Artist(name=artist["name"], uri=artist["href"]) for artist in spotify_track["track"]["artists"]],
+                                album=Album(name=spotify_track["track"]["album"]["name"], uri=spotify_track["track"]["album"]["href"]),
+                                track_no=spotify_track["track"]["track-number"],
+                                length=spotify_track["track"]["length"],
+                                bitrate=settings.SPOTIFY_BITRATE,
+                            )
+                else:
+                    track = SpotifyTranslator.to_mopidy_track(spotify_track)
+
             # Tweet #Nowplaying ... / ... requested by @...
             artists = ', '.join([a.name for a in track.artists])
             uri = track.uri
@@ -56,6 +80,9 @@ class TwitterFrontend(ThreadingActor, BackendListener):
             tweet = u'#Nowplaying %s / %s, requested by @%s %s' % (artists, track.name, screen_name, utils.spotify_uri_to_url(uri))
             self.api.update_status(status=tweet, lat="50.82519295639108", long="-0.14594435691833496", display_coordinates="1")
             logger.info(u'Tweeted: %s' % tweet)
+
+        except SpotifyError, e:
+            logger.debug(u'Failed to lookup "%s": %s', track.uri, e)
 
         except KeyError:
             # Not requested through Twitter?
